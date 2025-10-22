@@ -80,8 +80,8 @@
             color: white;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease;
-            animation: rollAnimation 0.5s ease;
+            /* 0.5s transition for the reveal effect */
+            transition: all 0.5s ease-out; 
         }
 
         /* Simple 360-degree rotation animation */
@@ -92,13 +92,21 @@
             75% { transform: rotate(270deg) scale(0.9); }
         }
 
+        /* Rolling state for the 1.0 second duration */
+        .die.rolling {
+            animation: rollAnimation 0.1s ease infinite; /* Fast, continuous animation */
+            background: linear-gradient(135deg, #aaa, #333); /* Generic dark/gray rolling color */
+            color: #ff922b; /* Bright color for the question marks */
+            font-size: 2em;
+        }
+
         /* Color gradients for the dice (Updated with Orange and Purple) */
         .die.red { background: linear-gradient(135deg, #ff6b6b, #c92a2a); }
         .die.blue { background: linear-gradient(135deg, #4dabf7, #1971c2); }
         .die.green { background: linear-gradient(135deg, #51cf66, #2f9e44); }
         .die.yellow { background: linear-gradient(135deg, #ffd43b, #fab005); }
-        .die.orange { background: linear-gradient(135deg, #ff922b, #e65900); } /* NEW */
-        .die.purple { background: linear-gradient(135deg, #be4bdb, #844c97); } /* NEW */
+        .die.orange { background: linear-gradient(135deg, #ff922b, #e65900); } 
+        .die.purple { background: linear-gradient(135deg, #be4bdb, #844c97); } 
 
 
         /* History section elements removed */
@@ -141,6 +149,51 @@
             color: #667eea;
         }
 
+        /* --- STYLES FOR COLOR TILES --- */
+        .filter-controls {
+            /* Changed back to horizontal layout */
+            display: flex;
+            flex-direction: row; 
+            justify-content: center; /* Center the row of buttons */
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            gap: 10px; 
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .color-filter-tile {
+            width: 80px; /* Small fixed width for horizontal row */
+            max-width: none;
+            height: 35px; 
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em; 
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-filter-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Specific gradients for the tiles */
+        .color-filter-tile.red { background: linear-gradient(45deg, #ff6b6b, #c92a2a); }
+        .color-filter-tile.blue { background: linear-gradient(45deg, #4dabf7, #1971c2); }
+        .color-filter-tile.green { background: linear-gradient(45deg, #51cf66, #2f9e44); }
+        .color-filter-tile.yellow { background: linear-gradient(45deg, #ffd43b, #fab005); }
+        .color-filter-tile.orange { background: linear-gradient(45deg, #ff922b, #e65900); } 
+        .color-filter-tile.purple { background: linear-gradient(45deg, #be4bdb, #844c97); }
+        .color-filter-tile.all-colors { background: linear-gradient(45deg, #4e54c8, #8f94fb); } /* Special gradient for ALL (kept but unused in HTML) */
+
+
         @media (max-width: 600px) {
             .container {
                 padding: 25px;
@@ -154,6 +207,11 @@
                 width: 80px;
                 height: 80px;
                 font-size: 1.2em; 
+            }
+            
+            /* The horizontal layout is naturally responsive now */
+            .color-filter-tile {
+                width: 65px; /* Slightly smaller width on mobile */
             }
         }
     </style>
@@ -189,22 +247,29 @@
             <div class="die orange">ORANGE</div>
         </div>
 
-        <!-- History Section HTML removed -->
-
-        <button class="roll-button" onclick="rollDice()">
+        <button class="roll-button" id="rollButton" onclick="rollDice()">
             🎲 ROLL DICE
         </button>
+
+        <!-- VISUAL FILTER CONTROLS (Single Row, Horizontal) -->
+        <div class="filter-controls">
+            <div id="redFilterButton" class="color-filter-tile red" onclick="setFilter('noRed')">RED</div>
+            <div id="blueFilterButton" class="color-filter-tile blue" onclick="setFilter('noBlue')">BLUE</div>
+            <div id="orangeFilterButton" class="color-filter-tile orange" onclick="setFilter('noOrange')">ORANGE</div>
+            <div id="purpleFilterButton" class="color-filter-tile purple" onclick="setFilter('noPurple')">PURPLE</div>
+            <div id="greenFilterButton" class="color-filter-tile green" onclick="setFilter('noGreen')">GREEN</div>
+            <div id="yellowFilterButton" class="color-filter-tile yellow" onclick="setFilter('noYellow')">YELLOW</div>
+        </div>
+
     </div>
 
     <script>
         let currentFilter = 'none';
         let diceValues = [0, 0, 0];
-        // Initial dice colors reflect the new colors
         let diceColors = ['green', 'blue', 'orange']; 
-        // History variables and functions have been removed
 
-        // NEW: Full list of all 6 colors
         const ALL_COLORS = ['red', 'blue', 'green', 'yellow', 'orange', 'purple'];
+        const rollButton = document.getElementById('rollButton');
 
         // Color pools based on the new 0-6 filter logic
         const colorPools = {
@@ -217,24 +282,33 @@
             noYellow: ['red', 'blue', 'green', 'orange', 'purple']  // 6
         };
         
-        // Initialize on DOM load to ensure elements exist
+        // Color display names for the dice text content
+        const colorNames = {
+            'red': 'RED',
+            'blue': 'BLUE',
+            'green': 'GREEN',
+            'yellow': 'YELLOW',
+            'orange': 'ORANGE',
+            'purple': 'PURPLE'
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
-            displayDice();
-            setFilter('none'); // Set initial filter text (even though it's hidden)
+            updateDiceDisplay();
+            setFilter('none');
         });
 
         function setFilter(filter) {
             currentFilter = filter;
             
-            // Text update logic remains, even though the element is hidden
             const filterTextElement = document.getElementById('filterText');
             if (filter === 'none') {
                 filterTextElement.textContent = 'All Colors Available';
             } else if (filter.startsWith('no')) {
-                // Extracts the color name (e.g., 'Red' from 'noRed')
                 const colorName = filter.substring(2); 
                 filterTextElement.textContent = `No ${colorName.toUpperCase()} Dice`;
             }
+            
+            // NOTE: Visual highlighting is intentionally removed.
         }
 
         function getRandomColor() {
@@ -244,62 +318,84 @@
         }
 
         function rollDice() {
-            // Roll three d4 dice (values 1-4)
+            // Disable button and keyboard controls during the roll
+            rollButton.disabled = true;
+
+            // 1. Determine final results immediately
             diceValues = [
                 Math.floor(Math.random() * 4) + 1,
                 Math.floor(Math.random() * 4) + 1,
-                Math.floor(Math.random() * 4) + 1
+                Math.floor(Math.random() * 4) + 1 
             ];
-
-            // Assign colors based on current filter
             diceColors = [
                 getRandomColor(),
                 getRandomColor(),
                 getRandomColor()
             ];
 
-            // Add roll animation class temporarily (animation restart hack)
-            const diceElements = document.getElementById('diceContainer').children;
-            for (let i = 0; i < diceElements.length; i++) {
-                diceElements[i].style.animation = 'none'; // Reset animation
-                void diceElements[i].offsetWidth; // Trigger reflow
-                diceElements[i].style.animation = 'rollAnimation 0.5s ease';
-            }
-
-            // Display the dice after a short delay (for animation)
-            setTimeout(displayDice, 100); 
-            
-            // Removed addToHistory call
-        }
-
-        // Removed displayHistory and clearHistory functions
-
-        function displayDice() {
             const container = document.getElementById('diceContainer');
+            
+            // 2. Start the 1.0-second rolling animation
             container.innerHTML = '';
-
-            // UPDATED with new colors
-            const colorNames = {
-                'red': 'RED',
-                'blue': 'BLUE',
-                'green': 'GREEN',
-                'yellow': 'YELLOW',
-                'orange': 'ORANGE',
-                'purple': 'PURPLE'
-            };
-
             for (let i = 0; i < 3; i++) {
                 const die = document.createElement('div');
-                die.className = `die ${diceColors[i]}`;
-                die.textContent = colorNames[diceColors[i]];
+                // Use a fast-repeating animation and generic display for 1.0s
+                die.className = `die rolling`; 
+                die.textContent = '???'; 
                 container.appendChild(die);
+            }
+
+            // 3. Set the final result after 1.0 seconds (the 0.5s transition is handled by CSS)
+            setTimeout(() => {
+                // Re-enable controls
+                rollButton.disabled = false; 
+
+                // Reveal the final result by updating the dice elements
+                updateDiceDisplay(true); 
+            }, 1000); /* Adjusted timing to 1000ms (1.0 second) */
+        }
+
+
+        function updateDiceDisplay(isRollingFinished = false) {
+            const container = document.getElementById('diceContainer');
+            
+            // If the container is empty (first roll/rolling phase), populate it with final results
+            if (isRollingFinished || container.children.length === 0) {
+                container.innerHTML = ''; // Clear existing (rolling or initial) elements
+                
+                for (let i = 0; i < 3; i++) {
+                    const die = document.createElement('div');
+                    
+                    // Apply final color class and remove the rolling class if present
+                    die.className = `die ${diceColors[i]}`; 
+                    die.textContent = colorNames[diceColors[i]];
+                    
+                    // On final result, ensure a short, definitive stop animation plays
+                    if (isRollingFinished) {
+                        die.style.animation = 'rollAnimation 0.5s ease 1';
+                    }
+
+                    container.appendChild(die);
+                }
+            } else {
+                // Initial load: just ensure current values are displayed
+                for (let i = 0; i < 3; i++) {
+                     if (container.children[i]) {
+                        container.children[i].className = `die ${diceColors[i]}`;
+                        container.children[i].textContent = colorNames[diceColors[i]];
+                     }
+                }
             }
         }
 
-        // Keyboard controls - UPDATED for 0 through 6
+
+        // Keyboard controls - Disabled during the roll
         document.addEventListener('keydown', (event) => {
+            if (rollButton.disabled) return; // Ignore input while rolling
+
             const key = event.key.toLowerCase();
             
+            // Map keys 0-6 to the corresponding filter functions
             if (key === '0') {
                 setFilter('none');
             } else if (key === '1') {
